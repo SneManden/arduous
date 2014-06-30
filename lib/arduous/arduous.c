@@ -27,6 +27,11 @@ static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
 }
 
 int ardk_start(void) {
+    
+    /*
+    Timer interrupt regards:
+    http://popdevelop.com/2010/04/mastering-timer-interrupts-on-the-arduino/
+    */
 
     /* First disable the timer overflow interrupt while we're configuring */
     TIMSK2 &= ~(1<<TOIE2);
