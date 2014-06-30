@@ -1,6 +1,10 @@
 #ifndef _ARDUOUS_H_
 #define _ARDUOUS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <avr/interrupt.h>
 
 /* Global constants */
@@ -38,5 +42,8 @@ static void ardk_enqueue(struct ardk_thread *head, struct ardk_thread *thread);
 /* Return an element from the front of the queue */
 static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _ARDUOUS_H_ */
