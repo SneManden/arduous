@@ -8,6 +8,7 @@ static struct ardk_thread *current_thread = NULL;
 /* Timeslice */
 static int time_slice; /* Number of msecs given to each thread */
 static int time_count;
+static int thread_count = 1;
 
 
 /**
@@ -91,6 +92,9 @@ int ardk_create_thread(void (*runner)(void)) {
     /* *stack is now the stack pointer. Add the thread to the queue */
     new_thread->sp_low = lower8(stack);
     new_thread->sp_high = higher8(stack);
+
+    new_thread->thread_id = thread_count++;
+
     ardk_enqueue(new_thread);
 
     return 0;
@@ -133,7 +137,7 @@ int ardk_start(int ts) {
      * (desired period = 1000 us) / 8 us = 125.
      * MAX(uint8) + 1 - 125 = 131;
     */
-   
+
     time_slice = ts;
 
     /* Issue next thread and put in the back of the queue */
@@ -154,6 +158,16 @@ int ardk_start(int ts) {
 static void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
     //if (thread_queue == NULL || current_thread == NULL || current_thread == thread_queue)
     //    goto ret; /* If current thread is next => skip context switch */
+
+    if (current_thread->thread_id == 0) {
+        digitalWrite(12, HIGH);
+        digitalWrite(13, LOW);
+    } else {
+        digitalWrite(13, HIGH);
+        digitalWrite(12, LOW);
+    }
+
+    print("Abekat");
 
     /* Save registers on stack */
     PUSHREGISTERS();

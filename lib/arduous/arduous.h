@@ -8,6 +8,7 @@
 
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <stdio.h>
 #include "Arduino.h"
 #include "assembly.h"
 
@@ -19,7 +20,7 @@
 #ifndef THREADMAXSTACKSIZE
 #define THREADMAXSTACKSIZE 100  /* Max stacksize for a thread */
 #endif
-#ifndef TIMERPRESET 
+#ifndef TIMERPRESET
 #define TIMERPRESET 131
 #endif
 
