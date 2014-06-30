@@ -31,6 +31,6 @@ struct ardk_thread {                    /* A kernel thread structure */
 /* Method declarations */
 int ardk_start(void);                           /* Start the Arduous kernel */
 int ardk_create_thread(void (*runner)(void));   /* Create a new thread */
-static int ardk_switch_thread();                /* Performs context switch */
+static int ardk_switch_thread(void);            /* Performs context switch */
 
 #endif /* _ARDUOUS_H_ */
