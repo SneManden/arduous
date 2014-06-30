@@ -43,20 +43,24 @@ int ardk_start(void) {
      * f_CPU / prescaler = 16E6 / 1024 = 15625 Hz ~= 64 us
      * 100 Hz => 10 ms = 10000 us
      * 10000 us / 64 us = 156,25
-     * Hvad skal vi da initialiserer timer reg. med for at få 100 Hz?
-     * => 8-bit reg. minus antal counts på 10 ms
+     * What to intialize timer reg. with to hit 100 Hz?
+     * => 8-bit reg. minus number of counts in 10 ms
      * 2^8 - 156,25 ~= 100
-     * Så hvis timer reg. sættes til 100, så kører timer med freq på 100 Hz
-     * Tilsvarende; 1 ms = 15,625 counts
+     * So if timer reg. is set to 100, the frequency is 100 Hz!
+     * Further; 1 ms = 15,625 counts
      * 2^8 - 15,625 ~= 240
-     * Så hvis timer reg. sættes til 240, så kører timer med freq på 1 kHz
+     * So if timer reg. is set to 240, the frequency is 1 kHz!
      */
 
     TCNT2 = 240;
 }
 
 ISR (TIMER2_OVF_vect, ISR_NAKED) {
+<<<<<<< HEAD
     /*Nu burde ISR gerne køre med frekvens på 1 kHz*/
 
 
+=======
+    /*ISR run with 1 kHz*/
+>>>>>>> 2f6cf574837ea4dfdbcad95056b8586b505462b1
 }
