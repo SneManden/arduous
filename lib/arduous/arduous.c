@@ -16,12 +16,18 @@ static int time_count;
  * @param thread The thread to insert into the queue
  */
 static void ardk_enqueue(struct ardk_thread *thread) {
-    struct ardk_thread *head = thread_queue;
-    struct ardk_thread *tail = head->prev;
-    head->prev = thread;
-    tail->next = thread;
-    thread->prev = tail;
-    thread->next = head;
+    if (thread_queue == NULL) {
+        thread_queue = thread;
+        thread->next = thread;
+        thread->prev = thread;
+    } else {
+        struct ardk_thread *head = thread_queue;
+        struct ardk_thread *tail = head->prev;
+        head->prev = thread;
+        tail->next = thread;
+        thread->prev = tail;
+        thread->next = head;
+    }
 }
 
 /**
@@ -118,7 +124,7 @@ int ardk_start(int ts) {
      * MAX(uint8) + 1 - 125 = 131;
     */
    
-   time_slice = ts;
+    time_slice = ts;
 
     return 0;
 }
