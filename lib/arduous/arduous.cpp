@@ -158,8 +158,7 @@ static void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
     /* Save registers on stack */
     PUSHREGISTERS();
 
-    Serial.print("current thread is ");
-    Serial.println(current_thread->thread_id);
+    Serial.println("woot");
 
     /* Save stack pointer */
     current_thread->sp_low = SPL;

@@ -1,9 +1,9 @@
 #ifndef _ARDUOUS_H_
 #define _ARDUOUS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
 
 #include <avr/interrupt.h>
@@ -51,8 +51,8 @@ static void ardk_enqueue(struct ardk_thread *thread);
 static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread);
 
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
 
 #endif /* _ARDUOUS_H_ */
