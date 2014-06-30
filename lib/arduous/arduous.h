@@ -17,7 +17,7 @@ extern "C" {
 #define MAXTHREADS 10           /* Max number of threads supported */
 #endif
 #ifndef THREADMAXSTACKSIZE
-#define THREADMAXSTACKSIZE 200  /* Max stacksize for a thread */
+#define THREADMAXSTACKSIZE 100  /* Max stacksize for a thread */
 #endif
 #ifndef TIMERPRESET 
 #define TIMERPRESET 131
@@ -44,7 +44,7 @@ struct ardk_thread {                    /* A kernel thread structure */
 /* Method declarations */
 int ardk_start(int ts);                  /* Starts the Arduous kernel */
 int ardk_create_thread(void (*runner)(void));   /* Creates a new thread */
-static void ardk_switch_thread(void);           /* Performs a context switch */
+static void ardk_switch_thread(void) __attribute__ ((naked));           /* Performs a context switch */
 /* Add an element in the back of the queue */
 static void ardk_enqueue(struct ardk_thread *thread);
 /* Return an element from the front of the queue */

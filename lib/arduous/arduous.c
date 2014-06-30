@@ -1,5 +1,6 @@
 #include "arduous.h"
 
+
 /* Pointer to head of thread queue (NULL if empty) */
 static struct ardk_thread *thread_queue = NULL;
 /* Pointer to currently running thread (NULL if none) */
@@ -27,6 +28,10 @@ static void ardk_enqueue(struct ardk_thread *thread) {
         tail->next = thread;
         thread->prev = tail;
         thread->next = head;
+        // thread->next = thread_queue;
+        // thread->prev = thread_queue->prev;
+        // thread_queue->prev->next = thread;
+        // thread_queue->prev = thread;
     }
 }
 
@@ -56,12 +61,13 @@ int ardk_create_thread(void (*runner)(void)) {
 
     if (current_thread) return -1; /* Not allowed to create while running */
 
-    new_thread = malloc( sizeof(struct ardk_thread) );
+    new_thread = (struct ardk_thread*) malloc( sizeof(struct ardk_thread) );
     if (new_thread == NULL) return -1;
 
-    stack = malloc(THREADMAXSTACKSIZE);
+    stack = (char*) malloc(THREADMAXSTACKSIZE);
     if (stack == NULL) return -1;
 
+    stack = stack + THREADMAXSTACKSIZE - 1;
     *(stack--) = 0x00;              /* Safety distance */
     *(stack--) = lower8(runner);
     *(stack--) = higher8(runner);
@@ -95,6 +101,8 @@ int ardk_create_thread(void (*runner)(void)) {
  * @return  0 on success; -1 on error
  */
 int ardk_start(int ts) {
+    DISABLE_INTERRUPTS();
+
     /* First disable the timer overflow interrupt while we're configuring */
     TIMSK2 &= ~(1<<TOIE2);
 
@@ -126,15 +134,24 @@ int ardk_start(int ts) {
    
     time_slice = ts;
 
+    /* Issue next thread and put in the back of the queue */
+    current_thread = thread_queue;
+    ardk_enqueue(ardk_dequeue(current_thread));
+
+    DISABLE_INTERRUPTS();
+    ardk_switch_thread();
+    ENABLE_INTERRUPTS();
+
+    while (1);
     return 0;
 }
 
 /**
  * Performs a context switch and invokes a new thread to execute
  */
-static void ardk_switch_thread(void) {
-    if (current_thread == thread_queue)
-        return 0; /* If current thread is next => skip context switch */
+static void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
+    //if (thread_queue == NULL || current_thread == NULL || current_thread == thread_queue)
+    //    goto ret; /* If current thread is next => skip context switch */
 
     /* Save registers on stack */
     PUSHREGISTERS();
@@ -153,6 +170,7 @@ static void ardk_switch_thread(void) {
     POPREGISTERS();
 
     /* (Enable interrupt and) return to address at stack pointer */
+    ret:
     RET();
 }
 
@@ -165,9 +183,7 @@ ISR(TIMER2_OVF_vect, ISR_NAKED) {
 
     if (time_count == time_slice) {
         time_count = 0;
-        DISABLE_INTERRUPTS();
         ardk_switch_thread();
-        ENABLE_INTERRUPTS();
     } else
         time_count++;
 }
