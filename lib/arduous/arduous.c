@@ -1,9 +1,12 @@
 #include "arduous.h"
 
 /* Pointer to head of thread queue (NULL if empty) */
-struct ardk_thread *thread_queue = NULL;
+static struct ardk_thread *thread_queue = NULL;
 /* Pointer to currently running thread (NULL if none) */
-struct ardk_thread *current_thread = NULL;
+static struct ardk_thread *current_thread = NULL;
+/* Timeslice */
+static int time_slice; /* Number of msecs given to each thread */
+static int time_count;
 
 
 /**
@@ -85,7 +88,7 @@ int ardk_create_thread(void (*runner)(void)) {
  *     http://popdevelop.com/2010/04/mastering-timer-interrupts-on-the-arduino/
  * @return  0 on success; -1 on error
  */
-int ardk_start(void) {
+int ardk_start(int ts) {
     /* First disable the timer overflow interrupt while we're configuring */
     TIMSK2 &= ~(1<<TOIE2);
 
@@ -114,6 +117,8 @@ int ardk_start(void) {
      * (desired period = 1000 us) / 8 us = 125.
      * MAX(uint8) + 1 - 125 = 131;
     */
+   
+   time_slice = ts;
 
     return 0;
 }
@@ -152,9 +157,11 @@ ISR(TIMER2_OVF_vect, ISR_NAKED) {
     /*ISR run with 1 kHz*/
     TCNT2  = TIMERPRESET;
 
-    DISABLE_INTERRUPTS();
-
-    ardk_switch_thread();
-
-    ENABLE_INTERRUPTS();
+    if (time_count == time_slice) {
+        time_count = 0;
+        DISABLE_INTERRUPTS();
+        ardk_switch_thread();
+        ENABLE_INTERRUPTS();
+    } else
+        time_count++;
 }

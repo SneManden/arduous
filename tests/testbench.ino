@@ -22,7 +22,7 @@ void setup() {
 
     ardk_create_thread(task1);
     ardk_create_thread(task2);
-    ardk_start();
+    ardk_start(1000);
 }
 
 void loop() {/* Move along */}
