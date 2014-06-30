@@ -56,11 +56,6 @@ int ardk_start(void) {
 }
 
 ISR (TIMER2_OVF_vect, ISR_NAKED) {
-<<<<<<< HEAD
-    /*Nu burde ISR gerne køre med frekvens på 1 kHz*/
-
-
-=======
     /*ISR run with 1 kHz*/
->>>>>>> 2f6cf574837ea4dfdbcad95056b8586b505462b1
+    Serial.println(millis());
 }
