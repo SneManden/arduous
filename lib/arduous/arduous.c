@@ -43,6 +43,8 @@ static void ardk_enqueue(struct ardk_thread *thread) {
 static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
     if (thread->prev == thread->next) /* If 1 element in queue => now empty */
         thread_queue = NULL;
+    else if (thread == thread_queue)
+        thread_queue = thread->next;
     thread->prev->next = thread->next;
     thread->next->prev = thread->prev;
     return thread;
