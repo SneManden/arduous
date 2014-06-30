@@ -29,8 +29,13 @@ struct ardk_thread {                    /* A kernel thread structure */
 
 
 /* Method declarations */
-int ardk_start(void);                           /* Start the Arduous kernel */
-int ardk_create_thread(void (*runner)(void));   /* Create a new thread */
-static int ardk_switch_thread(void);            /* Performs context switch */
+int ardk_start(void);                           /* Starts the Arduous kernel */
+int ardk_create_thread(void (*runner)(void));   /* Creates a new thread */
+static int ardk_switch_thread(void);            /* Performs a context switch */
+/* Add an element in the back of the queue */
+static void ardk_enqueue(struct ardk_thread *head, struct ardk_thread *thread);
+/* Return an element from the front of the queue */
+static struct *ardk_thread ardk_dequeue(struct ardk_thread *thread);
+
 
 #endif /* _ARDUOUS_H_ */
