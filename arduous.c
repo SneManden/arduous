@@ -31,4 +31,5 @@ int ardk_start(void) {
 
 ISR (TIMER2_OVF_vect, ISR_NAKED) {
     /*ISR run with 1 kHz*/
+    Serial.println(millis());
 }
