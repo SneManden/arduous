@@ -81,6 +81,8 @@ int ardk_create_thread(void (*runner)(void)) {
 
 /**
  * Initializes the kernel
+ * Timer interrupt regards:
+ *     http://popdevelop.com/2010/04/mastering-timer-interrupts-on-the-arduino/
  * @return  0 on success; -1 on error
  */
 int ardk_start(void) {
@@ -104,6 +106,14 @@ int ardk_start(void) {
     /* Finally load end enable the timer */
     TCNT2 = TIMERPRESET;
     TIMSK2 |= (1<<TOIE2);
+
+    /* We need to calculate a proper value to load the timer counter.
+     * The following loads the value 131 into the Timer 2 counter register
+     * The math behind this is:
+     * (CPU frequency = 16E6) / (prescaler value = 128) = 125000 Hz = 8 us.
+     * (desired period = 1000 us) / 8 us = 125.
+     * MAX(uint8) + 1 - 125 = 131;
+    */
 
     return 0;
 }
