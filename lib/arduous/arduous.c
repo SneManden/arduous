@@ -27,36 +27,32 @@ static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
 }
 
 int ardk_start(void) {
-    /*Configure TIMER2 in normal mode (pure counting, no PWM)*/
-    TCCR2A = 0x00;
 
-    /*Set prescaler to 1024*/
-    TCCR2B |= (1 << CS22) | (1 << CS21) | (1 << CS20);
+    /* First disable the timer overflow interrupt while we're configuring */
+    TIMSK2 &= ~(1<<TOIE2);
 
-    /*Disable Compare Match A interrupt enable*/
-    TIMSK2 &= ~(1 << OCIE2A);
+    /* Configure timer2 in normal mode (pure counting, no PWM etc.) */
+    TCCR2A &= ~((1<<WGM21) | (1<<WGM20));
+    TCCR2B &= ~(1<<WGM22);
 
-    /*Overflow interrupt enable*/
-    TIMSK2 = 0x01;
+    /* Select clock source: internal I/O clock */
+    ASSR &= ~(1<<AS2);
 
-    /*
-     * f_CPU / prescaler = 16E6 / 1024 = 15625 Hz ~= 64 us
-     * 100 Hz => 10 ms = 10000 us
-     * 10000 us / 64 us = 156,25
-     * What to intialize timer reg. with to hit 100 Hz?
-     * => 8-bit reg. minus number of counts in 10 ms
-     * 2^8 - 156,25 ~= 100
-     * So if timer reg. is set to 100, the frequency is 100 Hz!
-     * Further; 1 ms = 15,625 counts
-     * 2^8 - 15,625 ~= 240
-     * So if timer reg. is set to 240, the frequency is 1 kHz!
-     */
+    /* Disable Compare Match A interrupt enable (only want overflow) */
+    TIMSK2 &= ~(1<<OCIE2A);
 
-    TCNT2 = 240;
+    /* Now configure the prescaler to CPU clock divided by 128 */
+    TCCR2B |= (1<<CS22)  | (1<<CS20); // Set bits
+    TCCR2B &= ~(1<<CS21);             // Clear bit
+
+    /* Finally load end enable the timer */
+    TCNT2 = 131;
+    TIMSK2 |= (1<<TOIE2);
 
     return 0;
 }
 
 ISR (TIMER2_OVF_vect, ISR_NAKED) {
     /*ISR run with 1 kHz*/
+    TCNT2  = 131;
 }

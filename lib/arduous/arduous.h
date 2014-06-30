@@ -6,6 +6,8 @@ extern "C" {
 #endif
 
 #include <avr/interrupt.h>
+#include <avr/io.h>
+#include "Arduino.h"
 
 /* Global constants */
 #ifndef MAXTHREADS
