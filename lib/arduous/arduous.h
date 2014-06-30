@@ -1,6 +1,7 @@
 #ifndef _ARDUOUS_H_
 #define _ARDUOUS_H_
 
+#include <avr/interrupt.h>
 
 /* Global constants */
 #ifndef MAXTHREADS
@@ -35,7 +36,7 @@ static int ardk_switch_thread(void);            /* Performs a context switch */
 /* Add an element in the back of the queue */
 static void ardk_enqueue(struct ardk_thread *head, struct ardk_thread *thread);
 /* Return an element from the front of the queue */
-static struct *ardk_thread ardk_dequeue(struct ardk_thread *thread);
+static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread);
 
 
 #endif /* _ARDUOUS_H_ */

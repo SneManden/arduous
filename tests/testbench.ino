@@ -1,4 +1,4 @@
-#include "../arduous.h"
+#include "arduous.h"
 
 void setup() {
     Serial.begin(9600);

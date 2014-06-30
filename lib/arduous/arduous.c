@@ -20,7 +20,7 @@ static void ardk_enqueue(struct ardk_thread *head, struct ardk_thread *thread) {
  * @param  thread The thread to remove from the queue
  * @return        Pointer to the element
  */
-static struct *ardk_thread ardk_dequeue(struct ardk_thread *thread) {
+static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
     thread->prev->next = thread->next;
     thread->next->prev = thread->prev;
     return thread;
@@ -53,9 +53,10 @@ int ardk_start(void) {
      */
 
     TCNT2 = 240;
+
+    return 0;
 }
 
 ISR (TIMER2_OVF_vect, ISR_NAKED) {
     /*ISR run with 1 kHz*/
-    Serial.println(millis());
 }
