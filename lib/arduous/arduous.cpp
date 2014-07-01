@@ -8,6 +8,7 @@ static struct ardk_thread thread_pool[MAXTHREADS];
 static struct ardk_thread *thread_queue = NULL;
 /* Pointer to currently running thread (NULL if none) */
 static struct ardk_thread *current_thread = NULL;
+static struct ardk_thread dummy;
 /* Timeslice */
 static int time_slice; /* Number of msecs given to each thread */
 static int time_count;
@@ -24,6 +25,7 @@ void ardk_print_queue(void) {
     } while (iter != thread_queue);
     Serial.println("----------");
 }
+
 
 void ardk_print_stack(char *stack, int bytes) {
     Serial.print("Stack: (starting at ");
@@ -49,27 +51,19 @@ void ardk_print_stack(char *stack, int bytes) {
  */
 void ardk_enqueue(struct ardk_thread *thread) {
     if (thread_queue == NULL) {
-        // Serial.println("Before: NULL");
         thread_queue = thread;
         thread->next = thread;
         thread->prev = thread;
     } else {
-        // Serial.println("Before:");
-        // ardk_print_queue();
         struct ardk_thread *head = thread_queue;
         struct ardk_thread *tail = head->prev;
         head->prev = thread;
         tail->next = thread;
         thread->prev = tail;
         thread->next = head;
-        // thread->next = thread_queue;
-        // thread->prev = thread_queue->prev;
-        // thread_queue->prev->next = thread;
-        // thread_queue->prev = thread;
     }
-    // Serial.println("After:");
-    // ardk_print_queue();
 }
+
 
 /**
  * Removes an element from the queue by updating pointers. Returns the element
@@ -85,6 +79,7 @@ struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
     thread->next->prev = thread->prev;
     return thread;
 }
+
 
 /**
  * Creates a new thread by allocating a new stack, clear it, save SP and
@@ -115,7 +110,6 @@ int ardk_create_thread(void (*runner)(void)) {
     // Serial.print( upper8(stack + THREADMAXSTACKSIZE - 1) , HEX);
     // Serial.println( lower8(stack + THREADMAXSTACKSIZE - 1) , HEX);
 
-
     /* Prepare the stack */
     stack = stack + THREADMAXSTACKSIZE - 1;
     *(stack--) = 0x00;              /* Safety distance */
@@ -141,8 +135,8 @@ int ardk_create_thread(void (*runner)(void)) {
     new_thread->sp_high = upper8(stack);
     ardk_enqueue(new_thread);
 
-    // Serial.print(" => thread created with id ");
-    // Serial.println(new_thread->thread_id);
+    Serial.print(" => thread created with id ");
+    Serial.println(new_thread->thread_id);
     // Serial.print("    starts at address: ");
     // Serial.print(upper8(runner), HEX);
     // Serial.print(" ");
@@ -151,6 +145,7 @@ int ardk_create_thread(void (*runner)(void)) {
 
     return 0;
 }
+
 
 /**
  * Initializes the kernel
@@ -194,14 +189,11 @@ int ardk_start(int ts) {
     */
 
     time_slice = ts;
-
-    /* Issue a thread and put in the back of the queue */
-    current_thread = thread_queue;
-    thread_queue = thread_queue->next;
-    // ardk_enqueue(ardk_dequeue(current_thread));
+    
+    current_thread = &dummy;
 
     DISABLE_INTERRUPTS();
-    start_threading();
+    ardk_switch_thread();
     ENABLE_INTERRUPTS();
 
     while (1);
@@ -218,9 +210,6 @@ ISR(TIMER2_OVF_vect, ISR_NAKED) {
 
     TCNT2 = TIMERPRESET;
 
-    if (current_thread != thread_queue)
-        goto popnret;
-
     if (time_count == time_slice) {
         // ardk_print_queue();
         time_count = 0;
@@ -233,7 +222,6 @@ ISR(TIMER2_OVF_vect, ISR_NAKED) {
         time_count++;
 
     /* Restore registers from stack and return */
-    popnret:
     POPREGISTERS();
     RET();
 }
@@ -256,9 +244,7 @@ void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
     /* Save registers on stack */
     PUSHREGISTERS();
 
-    if (current_thread != thread_queue) {
-        ardk_context_switch();
-    }
+    ardk_context_switch();
 
     /* Restore registers from stack and return */
     POPREGISTERS();
@@ -268,10 +254,10 @@ void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
 
 
 
-void __attribute__ ((naked, noinline)) start_threading(void) {
-    PUSHREGISTERS();
-    SPL = current_thread->sp_low;
-    SPH = current_thread->sp_high;
-    POPREGISTERS();
-    RET();
-}
+// void __attribute__ ((naked, noinline)) start_threading(void) {
+//     PUSHREGISTERS();
+//     SPL = current_thread->sp_low;
+//     SPH = current_thread->sp_high;
+//     POPREGISTERS();
+//     RET();
+// }
