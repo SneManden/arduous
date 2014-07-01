@@ -1,6 +1,9 @@
 #include "arduous.h"
 
-
+/* Stack pool */
+static char stack_pool[MAXTHREADS][THREADMAXSTACKSIZE];
+/* Thread pool */
+static struct ardk_thread thread_pool[MAXTHREADS];
 /* Pointer to head of thread queue (NULL if empty) */
 static struct ardk_thread *thread_queue = NULL;
 /* Pointer to currently running thread (NULL if none) */
@@ -22,6 +25,21 @@ void ardk_print_queue(void) {
     Serial.println("----------");
 }
 
+void ardk_print_stack(char *stack, int bytes) {
+    Serial.print("Stack: (starting at ");
+    Serial.print( upper8(stack) , HEX);
+    Serial.print( lower8(stack) , HEX);
+    Serial.println(")");
+    int i;
+    for (i=0; i<bytes; i++) {
+        Serial.print("  ");
+        Serial.print(upper8(stack+i), HEX);
+        Serial.print(lower8(stack+i), HEX);
+        Serial.print(": ");
+        Serial.println( *(stack+i), HEX );
+    }
+}
+
 
 /**
  * Insert *thread into back of queue by modifying pointers of the head and tail
@@ -29,7 +47,7 @@ void ardk_print_queue(void) {
  * @param head   Head of the queue
  * @param thread The thread to insert into the queue
  */
-static void ardk_enqueue(struct ardk_thread *thread) {
+void ardk_enqueue(struct ardk_thread *thread) {
     if (thread_queue == NULL) {
         // Serial.println("Before: NULL");
         thread_queue = thread;
@@ -58,7 +76,7 @@ static void ardk_enqueue(struct ardk_thread *thread) {
  * @param  thread The thread to remove from the queue
  * @return        Pointer to the element
  */
-static struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
+struct ardk_thread *ardk_dequeue(struct ardk_thread *thread) {
     if (thread_queue->prev == thread_queue->next) /* If 1 element in queue => now empty */
         thread_queue = NULL;
     else if (thread == thread_queue)
@@ -81,16 +99,28 @@ int ardk_create_thread(void (*runner)(void)) {
 
     if (current_thread) return -1; /* Not allowed to create while running */
 
-    new_thread = (struct ardk_thread*) malloc( sizeof(struct ardk_thread) );
-    if (new_thread == NULL) return -1;
+    // Serial.println("ardk_create_thread():");
 
-    stack = (char*) malloc(THREADMAXSTACKSIZE);
-    if (stack == NULL) return -1;
+    /* Get a new thread from the thread pool */
+    new_thread = &thread_pool[thread_count];
+    new_thread->thread_id = thread_count++;
 
+    /* stack is starting address of stack, from the stack pool */
+    stack = (char*) &stack_pool[new_thread->thread_id];
+
+    // Serial.print(" => got stack at address: ");
+    // Serial.print( upper8(stack) , HEX);
+    // Serial.println( lower8(stack) , HEX);
+    // Serial.print(" => top of stack at address: ");
+    // Serial.print( upper8(stack + THREADMAXSTACKSIZE - 1) , HEX);
+    // Serial.println( lower8(stack + THREADMAXSTACKSIZE - 1) , HEX);
+
+
+    /* Prepare the stack */
     stack = stack + THREADMAXSTACKSIZE - 1;
     *(stack--) = 0x00;              /* Safety distance */
     *(stack--) = lower8(runner);
-    *(stack--) = higher8(runner);
+    *(stack--) = upper8(runner);
     /* Mega 2560 use 3 byte for call/ret addresses the rest only 2 */
     #if defined (__AVR_ATmega2560__)
         *(stack--) = EIND;
@@ -103,19 +133,21 @@ int ardk_create_thread(void (*runner)(void)) {
         *(stack--) = RAMPZ;
         *(stack--) = EIND;
     #endif
-    for (i=0; i<30; i++)    /* R2-R31 = 30 registers */
+    for (i=2; i<=31; i++)    /* R2-R31 = 30 registers */
         *(stack--) = 0x00;
 
     /* *stack is now the stack pointer. Add the thread to the queue */
     new_thread->sp_low = lower8(stack);
-    new_thread->sp_high = higher8(stack);
-
-    new_thread->thread_id = thread_count++;
-
+    new_thread->sp_high = upper8(stack);
     ardk_enqueue(new_thread);
 
-    // Serial.print("Thread created with id ");
+    // Serial.print(" => thread created with id ");
     // Serial.println(new_thread->thread_id);
+    // Serial.print("    starts at address: ");
+    // Serial.print(upper8(runner), HEX);
+    // Serial.print(" ");
+    // Serial.println(lower8(runner), HEX);
+    // ardk_print_stack(stack+1, 36);
 
     return 0;
 }
@@ -163,13 +195,13 @@ int ardk_start(int ts) {
 
     time_slice = ts;
 
-    /* Issue next thread and put in the back of the queue */
+    /* Issue a thread and put in the back of the queue */
     current_thread = thread_queue;
     thread_queue = thread_queue->next;
     // ardk_enqueue(ardk_dequeue(current_thread));
 
     DISABLE_INTERRUPTS();
-    ardk_switch_thread();
+    start_threading();
     ENABLE_INTERRUPTS();
 
     while (1);
@@ -177,12 +209,39 @@ int ardk_start(int ts) {
 }
 
 /**
+ * Interrupt service routine
+ */
+ISR(TIMER2_OVF_vect, ISR_NAKED) {
+    /*ISR run with 1 kHz*/
+    /* Save registers on stack */
+    PUSHREGISTERS();
+
+    TCNT2 = TIMERPRESET;
+
+    if (current_thread != thread_queue)
+        goto popnret;
+
+    if (time_count == time_slice) {
+        // ardk_print_queue();
+        time_count = 0;
+        // Serial.print("Switching from thread ");
+        // Serial.println(current_thread->thread_id);
+        ardk_context_switch();
+        // Serial.print("... to thread ");
+        // Serial.println(current_thread->thread_id);
+    } else
+        time_count++;
+
+    /* Restore registers from stack and return */
+    popnret:
+    POPREGISTERS();
+    RET();
+}
+
+/**
  * Performs a context switch and invokes a new thread to execute
  */
-static void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
-    //if (thread_queue == NULL || current_thread == NULL || current_thread == thread_queue)
-    //    goto ret; /* If current thread is next => skip context switch */
-
+void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
     // if (current_thread->thread_id == 0) {
     //     digitalWrite(12, HIGH);
     //     digitalWrite(13, LOW);
@@ -197,34 +256,9 @@ static void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
     /* Save registers on stack */
     PUSHREGISTERS();
 
-    ardk_context_switch();
-
-    /* Restore registers from stack and return */
-    POPREGISTERS();
-    RET();
-}
-
-/**
- * Some helpful comment here
- */
-ISR(TIMER2_OVF_vect, ISR_NAKED) {
-    /*ISR run with 1 kHz*/
-
-    /* Save registers on stack */
-    PUSHREGISTERS();
-
-    TCNT2  = TIMERPRESET;
-
-    if (time_count == time_slice) {
-        // ardk_print_queue();
-        time_count = 0;
-        // Serial.print("Switching from thread ");
-        // Serial.println(current_thread->thread_id);
+    if (current_thread != thread_queue) {
         ardk_context_switch();
-        // Serial.print("... to thread ");
-        // Serial.println(current_thread->thread_id);
-    } else
-        time_count++;
+    }
 
     /* Restore registers from stack and return */
     POPREGISTERS();
@@ -233,15 +267,11 @@ ISR(TIMER2_OVF_vect, ISR_NAKED) {
 
 
 
-static void ardk_context_switch(void) {
-    /* Save stack pointer */
-    current_thread->sp_low = SPL;
-    current_thread->sp_high = SPH;
-    /* Issue next thread and put in the back of the queue */
-    current_thread = thread_queue;
-    thread_queue = thread_queue->next;
-    // ardk_enqueue(ardk_dequeue(current_thread));
-    /* Restore stack pointer */
+
+void __attribute__ ((naked, noinline)) start_threading(void) {
+    PUSHREGISTERS();
     SPL = current_thread->sp_low;
     SPH = current_thread->sp_high;
+    POPREGISTERS();
+    RET();
 }

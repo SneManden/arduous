@@ -10,6 +10,7 @@ void task1(void) {
     // Serial.println("1");
     Serial.println("Thread 1 was started");
     while (1) {
+        Serial.println("m");
         /* Gør noget her */
         //digitalWrite(LED_PIN, HIGH);
     }
@@ -17,7 +18,7 @@ void task1(void) {
 
 void task2(void) {
     // Serial.println("2");
-    Serial.println("Thread 2 was started");
+    // Serial.println("Thread 2 was started");
     while (1) {
         /* Gør noget her */
         //digitalWrite(LED_PIN, LOW);
@@ -35,8 +36,8 @@ void setup() {
     if (ardk_create_thread(task1))
         Serial.println("Thread 1 returned with error");
 
-    if (ardk_create_thread(task2))
-        Serial.println("Thread 2 returned with error");
+    // if (ardk_create_thread(task2))
+    //     Serial.println("Thread 2 returned with error");
 
     Serial.println("Starting kernel...");
 
