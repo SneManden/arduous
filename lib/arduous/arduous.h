@@ -45,6 +45,11 @@
         SPL = current_thread->sp_low; \
         SPH = current_thread->sp_high; \
     } } while(0)
+#if defined (__AVR_ATmega2560__) || defined (__AVR_ATmega1280__)
+#define SERIAL Serial1
+#else
+#define SERIAL Serial
+#endif
 
 
 /**
