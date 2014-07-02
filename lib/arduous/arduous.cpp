@@ -100,8 +100,8 @@ int ardk_create_thread(void (*runner)(void)) {
     new_thread->sp_high = upper8(stack);
     ardk_enqueue(new_thread);
 
-    SERIAL.print(" => thread created with id ");
-    SERIAL.println(new_thread->thread_id);
+    Serial.print(" => thread created with id ");
+    Serial.println(new_thread->thread_id);
 
     return 0;
 }
@@ -197,13 +197,13 @@ void __attribute__ ((naked, noinline)) ardk_switch_thread(void) {
  */
 void ardk_print_queue(void) {
     struct ardk_thread *iter = thread_queue;
-    SERIAL.println("Queue:");
+    Serial.println("Queue:");
     do {
-        SERIAL.print("  thread ");
-        SERIAL.println(iter->thread_id);
+        Serial.print("  thread ");
+        Serial.println(iter->thread_id);
         iter = iter->next;
     } while (iter != thread_queue);
-    SERIAL.println("----------");
+    Serial.println("----------");
 }
 
 
@@ -214,15 +214,15 @@ void ardk_print_queue(void) {
  */
 void ardk_print_stack(char *stack, int bytes) {
     int i;
-    SERIAL.print("Stack: (starting at ");
-    SERIAL.print( upper8(stack) , HEX);
-    SERIAL.print( lower8(stack) , HEX);
-    SERIAL.println(")");
+    Serial.print("Stack: (starting at ");
+    Serial.print( upper8(stack) , HEX);
+    Serial.print( lower8(stack) , HEX);
+    Serial.println(")");
     for (i=0; i<bytes; i++) {
-        SERIAL.print("  ");
-        SERIAL.print(upper8(stack+i), HEX);
-        SERIAL.print(lower8(stack+i), HEX);
-        SERIAL.print(": ");
-        SERIAL.println( *(stack+i), HEX );
+        Serial.print("  ");
+        Serial.print(upper8(stack+i), HEX);
+        Serial.print(lower8(stack+i), HEX);
+        Serial.print(": ");
+        Serial.println( *(stack+i), HEX );
     }
 }
